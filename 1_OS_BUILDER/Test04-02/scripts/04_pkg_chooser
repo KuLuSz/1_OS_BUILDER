@@ -1,0 +1,72 @@
+#!/bin/sh
+echo
+echo " Package chooser"
+
+[ -e $PL ]&& rm $PL
+touch $PL
+
+#FULL="$(grep -R "Package: " $RD | cut -f2 -d' ')"
+FULL="$(cut -f1 -d'%' $RF)"
+
+while : ;do
+ SELECT=''
+ echo && echo -ne " Search usage: 
+   keyword may contain: a-z,0-9,- rule: 2<chars
+   special keys: all = print all packages, h = help, q = quit
+                 rm pkg_name = remove pkg from the selected packages
+   
+ Selected packages: $(cat $PL | sort | sed 's/$/ /' | tr -d '\n')\n 
+ Search package: " && read i
+ [ "$i" == 'q' ]&& break
+
+ if [ "$i" == 'h' ];then
+PKGS="bash binutils busybox coreutils disktype findutils fuse gzip kmod mingetty
+ncurses-base readline-common sed udev unzip util-linux zip zlib1g"
+ echo -e "\nRecommended minimum package list:\n$PKGS\n"
+ echo -n "You want add these packages to the selected list ?
+   enter = yes , any key = no "
+ read i
+ [ -z "$i" ]&& echo "$PKGS" | tr ' ' '\n' >> $PL
+continue
+fi
+ 
+
+ if [ "${#i}" -gt '2' ];then
+  echo
+  if [ "$(grep "rm " <<< "$i")" ];then
+   PKG="$(sed 's/rm //' <<< "$i")"
+   sed -i "/^$PKG$/d" $PL
+   echo "$PKG removed"
+   continue
+  fi
+  if [ "$i" == 'all' ];then
+   SELECT="$(echo "$FULL" | grep -n .)"
+   else
+   SELECT="$(echo "$FULL" | grep ".*$i.*" | grep -n .)"
+  fi
+  if [ "$SELECT" ];then
+  echo "$SELECT" | sed 's/:[0-9]*:/:/g'
+  echo && echo -ne " Choose number for add. ex:6 or 1 12 45 ...
+   (enter = back to search) (q = quit)
+   (all = all package add)\n\n Give me something: "
+  read i2
+  [ "$i2" == '' ]&& continue
+  [ "$i2" == 'q' ]&& break
+  [ "$i2" == 'all' ]&& i2="$(cut -f1 -d: <<< "$SELECT")"
+   for nums in $i2;do
+   PKG_NAME="$(grep "^$nums:" <<< "$SELECT" | cut -f2 -d':')"
+   [ -z "$(grep "^$PKG_NAME$" $PL)" ]&& echo "$PKG_NAME" >> $PL
+   done
+   #sleep 3
+  else
+  echo " No results found"
+  fi
+ else
+ echo "Enter more than 2 chars..."
+ fi
+done
+
+[ ! -s $PL ]&& echo " - no package selected ..." | tee -a $STOP
+
+
+

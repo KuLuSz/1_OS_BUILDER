@@ -1,0 +1,133 @@
+#!/bin/sh
+echo
+echo " Package list check/expansion..."
+
+DIR="/scriptek/1_OS_BUILDER/Test04-02/tmp/repo"
+RF="$DIR/repository"
+F="$DIR/extended_list"
+F2="${F}_2"
+
+ARCH="i386"
+[ "$ARCH" == "i386" ]&& GREPV="amd64"
+
+rm -f ${F}*
+sync
+touch $F $F2
+
+echo -n " Convert repository for fast working..."
+
+grep -R "^Pac\|^Ver\|^Inst\|^Depends: \|^Fil\|^Siz" $DIR |
+cut -f2- -d: | sed 's/([^)]*)//g ; s/ //g;
+s/^Ver[^:]*:\|^Inst[^:]*:\|^Dep[^:]*:\|^Fil[^:]*:\|^Size:/%/' |
+tr -d '\n' | sed -e 's/Package:/\n/g' > $RF
+
+echo "   DONE"
+
+########## BEMENET:
+
+echo "jwm2" | tee -a "$F" "$F2" | sed 's/^/ > add /'
+
+if [ -z "$1" ];then
+DEFAULT_PKGS="debconf perl-base apt apt-utils gpgv dpkg bash binutils
+busybox coreutils disktype findutils fuse gzip kmod mingetty
+ncurses-base readline-common sed udev unzip util-linux zip zlib1g"
+
+for i in $DEFAULT_PKGS;do
+[ ! "$(grep "^${i}$" $F2)" ]&&\
+echo "$i" | tee -a "$F" "$F2" | sed 's/^/ > add /' # >> "$LOG"
+done
+fi
+
+CNT=0
+DL_SIZE=0
+INST_SIZE=0
+while [ "$(cat $F)" != '' ];do
+ SP="$(cat $F | head -n1 | cut -f1 -d:)"
+  if [ -z "$(grep "^${SP}%" $RF)" ];then
+  echo "!!!!! Failed: not found $SP package in the repository"
+  SP=''
+  fi
+ 
+ if [ "$SP" != '' ];then
+ CNT=$[$CNT+1]
+ 
+ echo "##### Check dependencies for $SP"
+ #add depending pkgs
+ if [ -z "$1" ];then
+ # for X
+ [ "$(grep "libx11.*" <<< "$SP")" -a ! "$(cat $F2 | grep "^xorg$")" ]&&\
+ echo -e "xorg\nmesa-utils\nmesa-vdpau-drivers\nllvm\ndesktop-file-utils
+libegl1-mesa\nlibegl-mesa0\nlibgl1-mesa-dri\nlibgl1-mesa-glx\nlibglapi-mesa\nlibglx-mesa0
+xinit\nxserver-xorg-input-all" | tee -a "$F" "$F2" | sed 's/^/>>>>> add /'
+
+ # for wayland (gtk3)
+ [ "$(grep "libwayland.*" <<< "$SP")" -a ! "$(cat $F2 | grep "^libwayland-egl1-mesa")" ]&&\
+ echo "libwayland-egl1-mesa" | tee -a "$F" "$F2" | sed 's/^/>>>>> add /'
+
+ # for sound
+ [ "$(grep "libasound.*" <<< "$SP")" -a ! "$(cat $F2 | grep "^alsa-base$")" ]&&\
+ echo -e "alsa-base\nalsa-utils\ndialog" | tee -a "$F" "$F2" | sed 's/^/>>>>> add /'
+
+ # for print
+ [ "$(cat $F2 | grep "^cups$")" ]&&\
+ echo -e "cups\ncups-pdf\nprinter-driver-cups-pdf\ncups-bsd\n" |
+ tee -a "$F" "$F2" | sed 's/^/add /'
+
+ # for fontconfig-config
+ #[ "$(grep "fontconfig-config" <<< "$SP")" ]&&\
+ #echo "fonts-dejavu-core" | tee -a "$F" "$F2" | sed 's/^/add /'
+ fi
+
+ #####################
+
+  NPKGS="$(grep "^${SP}%" $RF | cut -f4 -d'%' | sed -e 's/,/\n/g')"
+  
+  if [ "`grep "\.deb$" <<< "$NPKGS"`" ];then
+  CUT=5
+  else
+  CUT=6
+  
+  if [ "$NPKGS" ];then
+  
+  #remove/replace pkgs
+  [ "$SP" == "xorg" ]&& NPKGS="$(sed 's/gnome-terminal/lxterminal/' <<< "$NPKGS")"
+  [ "$SP" == "xserver-xorg" ]&& NPKGS="$(sed '/python[0-9]-apport/d' <<< "$NPKGS")"
+  [ "$SP" == "xserver-xorg-input-libinput" ]&& NPKGS="$(sed '/xorg-input-abi-2/d' <<< "$NPKGS")"
+  [ "$SP" == "xserver-xorg-core" ]&& NPKGS="$(sed '/keyboard-configuration/d' <<< "$NPKGS")"
+  [ "$SP" == "lxde" ]&& NPKGS="$(sed 's/leafpad/geany/' <<< "$NPKGS")"
+  
+  ##################### 
+   for i in $NPKGS;do
+   if [ "$(grep '|' <<< "$i")" ];then
+   GREP="$(tr '|' '\n' <<< "$i" | sed 's/^/\\|\^/ ; s/$/\$/ ; 1s/^..//' | tr -d '\n')"
+   [ "$(grep -e "${GREP}" $F2)" != '' ]&& break
+   echo "##### STOP: Choose dependency for $SP :"
+   LIST="$(echo "$i" | tr '|' '\n' | grep -n .)"
+   echo "$LIST"   
+   while [ -z "$i2" ];do
+   read -p " Choose number: " i2
+   i="$(grep "${i2}:" <<< "$LIST" | cut -f2 -d:)"
+   [ -z "$i" ]&& i2=''
+   done
+   i2=''
+   fi
+   if [ ! "$(cat $F2 | grep "^$i$")" ];then
+	if [ ! "$(grep ".*cross.*\|.*$GREPV.*\|.*dev.*\|libc6-x32\|gcc\-[0-9]\-base" <<< "$i")" ];then
+    tee -a $F $F2 <<< "$i" | sed 's/^/>>>>> add /'
+    fi
+   fi
+   done
+  fi
+  INST_SIZE=$[$INST_SIZE+$(grep "^${SP}%" $RF | cut -f3 -d'%' )]
+  DL_SIZE=$[$DL_SIZE+$(grep "^${SP}%" $RF | cut -f$CUT -d'%' )]
+  fi
+ fi
+ [ "$(cat $F)" != '' ]&& sed -i '/^$/d' "$F" && sed -i '1 d' "$F"
+done
+
+cat $F2 | sort | uniq > $F && rm $F2
+
+echo -e "\n Package list check/expansion has finished.\n
+   Total of $CNT packages will be downloaded.
+   Space requirements for downloadable packages: $(numfmt --to=iec <<< $DL_SIZE)b
+   Installed size of packages: $(numfmt --to=iec <<< $[$INST_SIZE*1000])b"

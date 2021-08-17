@@ -1,0 +1,98 @@
+#!/bin/sh
+echo
+DD="$TMP/distros"
+
+[ ! -d $DD ]&& mkdir -p $DD
+
+for i in $LINKS;do
+if [ -z "$(wget -T 3 -t 1 --spider --server-response $i 2>&1 | grep '200 OK')" ];then
+ echo -e "\\033[66G[FAILED]"
+ echo "   - URL not found or no exits: $i"
+ echo "    $(wget -T 3 -t 1 --spider --server-response $i 2>&1 | grep 'HTTP/' | cut -f4- -d' ')"
+ echo
+else
+ if [ "${i##*/}" != "huge_kernels" ];then
+ DISTRO="$(cut -f4 -d/ <<< "$i")"
+ echo -n "   Download '$DISTRO' active codenames..."
+ wget -T 3 -t 1 -q -O- "$i"| grep 'href' | sed 's/<[^>]*>//g' |
+ grep -v '[a-z]\-[a-z]\|^P\|^ \|^I\|^R' | sed 's:/ *:|: ; s: [0-9].*$::' > "$DD/$DISTRO"
+ DISTROS="$DISTROS
+$DISTRO"
+ echo -e "\\033[68G[DONE]"
+ else
+ echo -n "   Download 'huge kernel' list..."
+ wget -q -O- "$i"| grep 'href' | cut -f4,7,9 -d'>' | grep "bz2<" |
+ sed 's:</a>\|</td>:|:g ; s:</td.*:: ; s: [0-9].*|:|: ; s:$:b:' | sort -r > $TMP/kernel_list
+ echo -e "\\033[68G[DONE]"
+ fi
+fi
+done
+CN="Choose number:"
+
+while [ ! "$ARCH" -a ! "$TARGET_DISTRO" -a ! "$TARGET_REPO" -a ! "$KERNEL" ];do
+echo -e "\n Target arhictecture:\n\n   1)	x86	32bit\n   2)	amd64	64bit\n"
+KLIST=''
+while [ ! "$ARCH" ];do
+read -p " $CN " ARCH
+[ ! "$ARCH" ]&& ARCH=1
+if [ "$ARCH" == '1' ];then ARCH=i386
+elif [ "$ARCH" == '2' ];then ARCH=amd64
+else ARCH=''
+fi
+done
+echo
+DLIST="$(grep -v "puppy\|^$" <<< "$DISTROS" | grep -n . | sed -e 's:^:   : ; s/:/\)\t/')"
+echo -e " Distribution:\n"
+echo "$DLIST"
+echo
+while [ ! "$TARGET_DISTRO" ];do
+read -p " $CN " DIST
+[ ! "$DIST" ]&& DIST=1
+if [ "$(grep " $DIST)" <<< "$DLIST")" ];then
+ TARGET_DISTRO="$(grep " $DIST)" <<< "$DLIST" | sed -e 's:^.*\t::')"
+else
+ TARGET_DISTRO=''
+fi
+done
+
+RLIST="$(cat $DD/$TARGET_DISTRO | grep -n . | sed -e 's:^:   : ; s/:/)\t/ ; s:|:\t:')"
+echo -e "\n Repository:\n"
+echo "$RLIST"
+echo
+while [ ! "$TARGET_REPO" ];do
+read -p " $CN " REPO
+[ ! "$REPO" ]&& REPO=1
+if [ "$(grep " $REPO)" <<< "$RLIST")" ];then
+ TARGET_REPO="$(grep " $REPO)" <<< "$RLIST" | sed -e 's:^.*)\t:: ; s:\t.*$::')"
+else
+ TARGET_REPO=''
+fi
+done
+
+[ "$ARCH" == "i386" ]&& KLIST="$(cat $TMP/kernel_list | grep -v 64)" ||
+KLIST="$(cat $TMP/kernel_list | grep 64)"
+KLIST="$(echo "$KLIST" | grep -n . | sed -e '/^[0-9]:/s/^/ /; s/^/  / ; s/|/\t/g ; s/:/)   /')"
+
+echo -e "\n Kernels:\n\n$KLIST"
+echo
+while [ ! "$KERNEL" ];do
+read -p " $CN " KERN
+[ ! "$KERN" ]&& KERN=1
+if [ "$(grep " $KERN)" <<< "$KLIST")" ];then
+ KERNEL="$(grep " $KERN)" <<< "$KLIST" | sed -e 's:^.*)   :: ; s:\t.*$::')"
+else
+ KERNEL=''
+fi
+done
+
+SETTINGS="\n System base settings:\n\n  Arch:    $ARCH
+  Repo:    $TARGET_DISTRO $TARGET_REPO
+  Kernel:  $KERNEL\n"
+echo -e "$SETTINGS"
+
+echo -ne " Are you sure you want to continue with these settings?\n  yes=enter reset=b   "
+read i
+[ "$i" == "b" ]&& ARCH='' && TARGET_DISTRO='' && TARGET_REPO='' && KERNEL=''
+done
+echo -e "$SETTINGS" >> $LOG
+
