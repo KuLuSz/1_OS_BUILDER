@@ -1,0 +1,38 @@
+#!/bin/sh
+
+FILE="$SRC_DIR/Sources"
+#FILE2="$DIR/Sources_grep_package_sel"
+
+echo -e "\n 03 - Csomagok Kiválasztása" >> $LOG
+
+FULL="$(cat $FILE | grep "^Package: \|^Version: " | tr -d '\n' |
+sed "s/Package: /\n/g ; s/Version://g" | sed '1 d')"
+
+while : ;do
+ SELECT=''
+ echo && echo "Keyword rule: [a-z 0-9 -]* > 2, q = quit"
+ echo -n "Keress valamire: " && read i
+ [ "$i" == 'q' ]&& break
+ if [ "${#i}" -gt '2' ];then
+  echo
+  [ "$i" == 'all' ]&& SELECT="$(echo "$FULL" | grep -n .)" || SELECT="$(echo "$FULL" | grep "$i" | grep -n .)"
+  if [ "$SELECT" ];then
+  echo "$SELECT"
+  echo && echo -n "Válassz számokat, enter=back, all=add all value: "
+  read i2
+  [ "$i2" == '' ]&& continue
+  [ "$i2" == 'q' ]&& break
+   if [ "$i2" == 'all' ];then
+   echo "$SELECT" # kiiratás
+   else
+   for nums in $i2;do
+   [ "$(grep "^$nums:" <<< "$SELECT")" ]&& grep "^$nums:" <<< "$SELECT" # kiiratás
+   done
+   fi
+  else
+  echo "Nincs találat"
+  fi
+ else
+ echo "Adj meg minimum 3 karaktert..."
+ fi
+done

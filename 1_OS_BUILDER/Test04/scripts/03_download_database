@@ -1,0 +1,24 @@
+#!/bin/sh
+echo
+
+ARCH="$(cat $LOG | grep "Arch:" | awk '{print $2}')"
+DIST="$(cat $LOG | grep "Repo:" | awk '{print $2}')"
+REPO="$(cat $LOG | grep "Repo:" | awk '{print $3}')"
+LINK="$(echo "$LINKS" | grep "$DIST")"
+
+[ ! -d $RD ]&& mkdir -p $RD
+
+for i in main universe multiverse;do
+LINK2=$LINK/$REPO/$i/binary-$ARCH/Packages.gz
+FILE_NAME="$(sed 's%http://%% ; s:/:_:g ' <<< "$LINK2")"
+echo -n "  Download $DIST $REPO $i package database..."
+wget --spider -q "$LINK2"
+if [ -n $? ];then
+ wget -q --no-check-certificate -O "$RD/$FILE_NAME" "$LINK2"
+ echo -e "\\033[68G[DONE]"
+else
+ echo -e "\\033[66G[FAILED]"
+fi
+done
+
+gunzip -f $RD/*

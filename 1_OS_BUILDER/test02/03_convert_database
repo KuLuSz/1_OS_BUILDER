@@ -1,0 +1,34 @@
+#!/bin/bash
+
+# http://ftp.hu.debian.org/debian/
+
+IFILE="/mnt/home/scriptek/1_OS_BUILDER/Test01/sources/Packages"
+OFILE="/mnt/home/scriptek/1_OS_BUILDER/Test01/tmp/03_converted_database"
+OFILE2="/mnt/home/scriptek/1_OS_BUILDER/Test01/tmp/03_converted_database_gui"
+[ -e $OFILE ]&& rm $OFILE
+[ -e $OFILE2 ]&& rm $OFILE2
+#####################################
+# Teljes bináris lista
+grep -E "^Pac|^Sou|^Ver|^Depends:|^Fil|^Description:|^Sec|^Siz" $IFILE |
+sed 's/P[a-z]*: /PN:/g ; s/So[a-z]*: /SRC:/g ; s/V[a-z]*: /VER:/g ; s/Dep[a-z]*: /DEP:/g ;
+s/F[a-z]*: /PDIR:/g ; s/Des[a-z]*: /DESC:/g ; s/Se[a-z]*: /CAT:/g ; s/Size: /SIZE:/g ;
+/\//s:[^/]*$::g ; /^PN\|^SRC/s/ (.*)//g ; /^DEP/s/ [|] /;/g' |
+sed -r '/PN:/s/$/\|/g ; /VER:/s/$/\|/g' | tr -d '\n' |
+sed -r 's/PN:/\n/g ; s/\|SRC:|VER:|\|DEP:|DESC:|CAT:|PDIR:|SIZE:/\|/g' | tail -n +2 >> $OFILE
+# F1	Bináris csomag neve
+# F2	Forrás csomag neve
+# F3	Verziója eredeti
+# F4	Függőségek
+# F5	Leírás
+# F6	Kategória
+# F7	Elérési út
+# F8	Méret
+#####################################
+# A gui-hoz lista
+grep -E "^Pac|^Ver|^Description:" $IFILE |
+sed 's/P[a-z]*: /PN:/g ; s/V[a-z]*: /VER:/g ; 
+s/Des[a-z]*: /DESC:/g ; /^PN/s/ (.*)//g ;
+/^VER:/s/\-.*$//g ; /^PN:/s/-[0-9]*\.[0-9]*.*$//g'| tr -d '\n' |
+sed -r 's/PN:/\n/g ; s/VER:[0-9]*:|VER:|DESC:/\|/g' | tail -n +2 >> $OFILE2
+#####################################
+

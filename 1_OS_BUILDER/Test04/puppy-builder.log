@@ -1,0 +1,31 @@
+
+ Puppy Builder CE - y2021 m06 d10
+
+ ################################
+
+
+ Package expansion - Check/add dependencies...
+
+ > add debconf
+ > add perl-base
+ > add apt
+ > add apt-utils
+ > add dpkg
+ > add bash
+ > add binutils
+ > add busybox
+ > add coreutils
+ > add disktype
+ > add findutils
+ > add fuse
+ > add gzip
+ > add kmod
+ > add mingetty
+ > add ncurses-base
+ > add readline-common
+ > add sed
+ > add udev
+ > add unzip
+ > add util-linux
+ > add zip
+ > add zlib1g

@@ -1,0 +1,15 @@
+#!/bin/bash
+
+echo -n " Checking: commands and network" | tee -a /dev/console $LOG
+
+for i in df echo wget ip tar grep sed awk date tee;do
+[ -z "$(which $i)" ]&& echo "    - Missing command:\t$i" >> $STOP
+done
+[ -z "$(ip addr show | grep "ine.*brd")" ]&& echo "    - No internet connection" >> $STOP
+
+if [ -e $STOP ];then
+echo -e "\\033[67G[ERROR]" | tee -a /dev/console $LOG
+cat $STOP | tee -a /dev/console $LOG
+else
+echo -e "\\033[70G[OK]" | tee -a /dev/console $LOG
+fi

@@ -1,0 +1,70 @@
+#!/bin/sh
+echo
+echo " Package expansion"
+
+DIR="/initrd/mnt/dev_save/scriptek/1_OS_BUILDER/Test04/tmp/repo"
+RF="$DIR/repository"
+F="$DIR/extended_list"
+F2="${F}_2"
+
+ARCH="i386"
+[ "$ARCH" == "i386" ]&& GREPV="amd64"
+
+rm -f ${F}*
+touch $F $F2
+
+grep -R "^Pac\|^Ver\|^Inst\|^Depends: \|^Fil\|^Siz" $DIR |
+cut -f2- -d: | sed 's/([^)]*)//g ; s/ //g;
+s/^Ver[^:]*:\|^Inst[^:]*:\|^Dep[^:]*:\|^Fil[^:]*:\|^Size:/%/' |
+tr -d '\n' | sed -e 's/Package:/\n/g' > $RF
+
+echo "openbox" | tee $F $F2
+
+while [ "$(cat $F)" != '' ];do
+ [ "$(cat $F)" != ''  ]&& FF="$F $F2"
+ SP="$(cat $F | head -n1)"
+ if [ "$SP" ];then
+
+ #add depending pkgs
+ 
+ # for X
+ [ "$(grep "libx11.*" <<< "$SP")" -a ! "$(cat $F2 | grep "^xorg$")" ]&&\
+ echo -e "xorg\nmesa-utils\nmesa-vdpau-drivers\nllvm\ndesktop-file-utils" | tee -a "$F" "$F2"
+ 
+ # for sound
+ [ "$(grep "libasound.*" <<< "$SP")" -a ! "$(cat $F2 | grep "^alsa-base$")" ]&&\
+ echo -e "alsa-base\nalsa-utils" | tee -a "$F" "$F2"
+
+ # for print
+ [ "$(cat $F2 | grep "^cups$")" ]&&\
+ echo -e "cups\ncups-pdf\nprinter-driver-cups-pdf\ncups-bsd\n" | tee -a "$F" "$F2"
+
+ # for terminal
+
+ #####################
+ 
+ echo "########## Check missing dependencies for $SP"
+ NPKGS="$(grep "^${SP}%" $RF | cut -f4 -d'%' | sed -e 's/,/\n/g')"
+
+ 
+  if [ "$NPKGS" -a ! "`grep "\.deb$" <<< "$NPKGS"`" ];then
+  
+  #remove/replace pkgs
+  [ "$SP" == "xorg" ]&& NPKGS="$(sed 's/gnome-terminal/lxterminal/' <<< "$NPKGS")"
+  [ "$SP" == "xserver-xorg" ]&& NPKGS="$(sed '/python[0-9]-apport/d' <<< "$NPKGS")"
+  [ "$SP" == "lxde" ]&& NPKGS="$(sed 's/leafpad/geany/' <<< "$NPKGS")"
+  ##################### 
+
+   for i in $NPKGS;do
+   if [ ! "$(cat $F2 | grep "^$i$")" ];then
+	if [ ! "$(grep ".*cross.*\|.*$GREPV.*\|.*dev.*\|libc6-x32\|gcc\-[0-9]\-base" <<< "$i")" ];then
+    tee -a $FF <<< "$i"
+    fi
+   fi
+   done
+  fi
+ [ "$(cat $F)" != '' ]&& sed -i '/^$/d' "$F" && sed -i '1 d' "$F"
+ fi
+done
+
+cat $F2 | sort | uniq > $F && rm $F2

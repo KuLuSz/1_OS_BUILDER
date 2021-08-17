@@ -1,0 +1,43 @@
+#!/bin/bash
+
+if [ ! -t 0 ];then
+$TERM -e $0 &
+exit
+fi
+
+BN="Puppy Builder CE"
+
+LINKS="https://distro.ibiblio.org/puppylinux/huge_kernels
+http://us.archive.ubuntu.com/ubuntu/dists
+http://ftp.hu.debian.org/debian/dists
+http://deb.devuan.org/devuan/dists"
+
+BD="${0%/*}"
+TMP="$BD/tmp"
+RD="$TMP/repo" #repo dir
+RF="$TMP/repository" # converted repository file
+PFL="$TMP/pkg_list" # package file list
+PL="$TMP/chooser_pkg_list"
+STOP="$TMP/stop"
+SRC_DIR="$BD/sources"
+LOG="$BD/puppy-builder.log"
+
+[ ! -e $TMP ]&& mkdir -p $TMP #|| rm -rf $TMP/*
+L="################################"
+clear
+echo -e "\n $BN - $(date +'y%Y m%m d%d')\n\n $L\n" | tee $LOG
+
+
+#for script in $BD/scripts/* ;do
+#[ ! -e $STOP ]&& . $script || break
+#done
+
+
+ . $BD/scripts/05_pkg_expansion
+
+[ -e $STOP ]&& cat $STOP | tee -a $LOG
+
+[ -e $STOP ]&& MESS0="stopped." || MESS0="succesfully finished."
+echo -e "\n $L\n\n Build process $MESS0" | tee -a $LOG
+echo
+#for i in {10..0};do echo -ne "  Quit ${i}s  \r";sleep 1 ;done; echo -e "  Byebye \r"
