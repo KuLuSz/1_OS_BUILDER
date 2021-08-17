@@ -1,0 +1,34 @@
+#!/bin/bash
+
+export BD="$(dirname $0)"
+export TMP="$BD/tmp"
+export SRC_DIR="$BD/sources"
+
+[ ! -e $TMP ]&& mkdir -p $TMP || rm $TMP/*
+
+DATE="$(date +'y%Y m%m d%d %H:%M')"
+LOG="$BD/puppy-builder.log"
+echo "
+ ############################################
+ #                                          #
+ #  Puppy Builder CE - $DATE  #
+ #                                          #
+ ############################################
+" > $LOG
+
+for script in $BD/scripts/* ;do
+[ ! -e $TMP/stop ]&& . $script || break
+done
+
+if [ -e $TMP/stop ];then
+echo -e "\n ############################################\n\n Építési folyamat megállítva." >> $LOG
+ if [ ! -z "$(cat $TMP/stop)" ];then
+ MESS='$(cat $LOG)'
+ clear
+ echo "$MESS"
+ xmessage "$MESS" --center
+ fi
+exit
+else
+echo -e "\n ############################################\n\n Építési folyamat sikeresen befejeződött." >> $LOG
+fi

@@ -1,0 +1,18 @@
+#!/bin/bash
+
+echo -n " 00 - Parancs és internet ellenörzés" >> $LOG
+
+for i in echo wget ip tar gtkdialog grep sed gcc make date uname;do
+if [ -z "$(which $i)" ];then
+[ "$i" == "gcc" -o "$i" == "make" ]&& DEV="\t(devx sfs szükséges!)" || DEV=""
+echo "    - Hiányzó parancs:\t$i$DEV" >> $TMP/stop
+fi
+done
+[ -z "$(ip addr show | grep "ine.*brd")" ]&& echo "    - Nincs internet kapcsolat" >> $TMP/stop
+
+if [ -e $TMP/stop ];then
+echo " < HIBA" >> $LOG
+cat $TMP/stop >> $LOG
+fi
+
+

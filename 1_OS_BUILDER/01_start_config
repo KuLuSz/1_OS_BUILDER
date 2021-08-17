@@ -1,0 +1,83 @@
+#!/bin/bash
+
+KERNEL_URL="https://distro.ibiblio.org/puppylinux/huge_kernels/"
+UREPO_URL="http://us.archive.ubuntu.com/ubuntu/"
+DREPO_URL="http://ftp.hu.debian.org/debian/"
+
+
+echo -n " 01 - Rendszer alap beállítások" >> $LOG
+
+[ ! -z "$(echo $(uname -i) | grep "86")" ]&& ARCH="i386" BIT="32 bit" || ARCH="amd64" BIT="64 bit" # check current arch
+
+[ -e $TMP/kernel_list ]&& rm $TMP/*
+
+for i in $KERNEL_URL $UREPO_URL $DREPO_URL ;do
+if [ -z "$(wget --spider --server-response $i 2>&1 | grep '200 OK')" ];then
+ echo -e "   - A cím hibás vagy nem létezik:\n      $i" >> $TMP/stop
+ echo "    $(wget --spider --server-response $i 2>&1 | grep 'HTTP/' | cut -f4- -d' ')" >> $TMP/stop
+ echo "" >> $TMP/stop
+fi
+done
+
+if [ -e $TMP/stop ];then
+echo "   [HIBA]" >> $LOG
+cat $TMP/stop >> $LOG
+else
+wget -q -O- "$KERNEL_URL" | grep "bz2<"| sed 's/.*bz2">// ;
+s/<\/.*m">/|/ ; s/ [0-9][0-9]:.*s">/|/ ; s/<.*// ; s/$/b/' > $TMP/kernel_list
+
+UREPOS="focal eoan disco cosmic bionic xenial trusty precise"
+DREPOS="bullseye buster sterch jessie stable oldstable"
+echo "$DREPOS" > $TMP/repos
+echo bullseye > $TMP/01_repo
+echo "$ARCH" > $TMP/01_arch
+echo "$DREPO_URL" > $TMP/01_repo_link
+
+export MD='<window title="'$BNAME'"><vbox>
+<text use-markup="true"><label>"<b>Üdvözöllek</b>"</label></text>
+<text><label>Ez egy rendszerépítő szkript. Az alábbi dolgok beállítása a legfontosabb egy rendszer építésénél...</label></text>
+<text use-markup="true"><label>"<b>Felkészültél?!</b>"</label></text>
+	<hbox space-expand="true"><text><label>Disztribució:</label></text>
+	<text><label>Arhitektura:</label></text>
+	<comboboxtext>	<default>'$BIT'</default>
+	<item>32 bit</item><item>64 bit</item><variable>OBIT</variable>
+	<action>[ "$OBIT" == "32 bit" ]&& echo "i386" > '$TMP'/01_arch</action>
+	<action>[ "$OBIT" == "64 bit" ]&& echo "amd64" > '$TMP'/01_arch</action>
+	</comboboxtext>
+	<comboboxtext>	<default>debian</default>
+	<item>ubuntu</item><item>debian</item><variable>DISTRO</variable>
+	<action>[ "$DISTRO" == "ubuntu" ]&& echo '$UREPOS' > '$TMP'/repos && echo "'$UREPO_URL'" > '$TMP'/01_repo_link</action>
+	<action>[ "$DISTRO" == "debian" ]&& echo '$DREPOS' > '$TMP'/repos && echo "'$DREPO_URL'" > '$TMP'/01_repo_link</action>
+	<action>refresh:REPO</action>
+	</comboboxtext>
+	<text><label>Tároló:</label></text>
+	<comboboxtext autorefresh="true"> <default>bullseye</default>
+	<input>cat '$TMP'/repos | sed "s/ /\n/g"</input><variable>REPO</variable>
+	<action>echo "$REPO" > '$TMP'/01_repo</action>
+	</comboboxtext></hbox>
+	<hbox space-expand="true">
+	<text><label>Kernel:</label></text>
+	<comboboxtext><input file>'$TMP'/kernel_list</input><variable>KVER</variable>
+	</comboboxtext>	</hbox>
+	<hbox>
+	<button><label>Tovább</label>
+	</button>
+	<button><label>Kilép</label>
+	</button>	
+	</hbox>
+</vbox></window>'
+eval `gtkdialog --program=MD --center`
+ if [ "$EXIT" == "Tovább" ];then
+ echo "   [OK]" >> $LOG
+ echo "    - Kernel verzió: $(cut -f2 -d- <<< "$KVER")
+    - Arhitektura: $(cat $TMP/01_arch)
+    - Tároló: $DISTRO - $REPO" >> $LOG
+ echo "$KERNEL_URL$(cut -f1 -d'|' <<< "$KVER")" > $TMP/01_kernel_DL_link
+ for i in `ls $TMP | grep -v "01_"`;do
+  rm $TMP/$i
+ done
+ else
+ echo "   [STOP]" >> $LOG
+ touch $TMP/stop
+ fi
+fi

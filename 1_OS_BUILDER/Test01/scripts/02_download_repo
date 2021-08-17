@@ -1,0 +1,34 @@
+#!/bin/bash
+
+echo -n " 02 - Adatbázis fájl letöltése" >> $LOG
+
+
+# source könyvtár létrehozása
+[ ! -e $SRC_DIR ]&& mkdir -p $SRC_DIR
+
+# kernel forrás könyvtárának neve
+SRC_KERNEL_DIR="$(basename $(cat $TMP/01_kernel_link) | sed "s/\.tar\.[gx]z//")"
+echo $SRC_KERNEL_DIR > $TMP/02_kernel_source_dir
+
+
+
+# repo adatbázis letöltése ##################################################
+ARCH="$(cat $TMP/01_arch)"
+REPO="$(cat $TMP/01_repo)"
+REPO_LINK="$(cat $TMP/01_repo_link)"
+#URL="${REPO_LINK}dists/$REPO/main/source/Sources.gz"
+URL="${REPO_LINK}dists/$REPO/main/binary-$ARCH/Packages.gz"
+
+if [ -z "$(wget --spider --server-response $URL 2>&1 | grep '200 OK')" ];then
+ echo " < HIBA" >> $LOG
+ echo -e "    - A cím hibás vagy nem létezik:\n      $URL
+      $(wget --spider --server-response "$URL" 2>&1 | grep 'HTTP/' | cut -f4- -d' ')
+" >> $TMP/stop
+exit
+else
+xmessage "Adatbázis fájl letöltése, kérlek várj..." -title "Letöltés" -center &
+PID1=$!
+wget -P $SRC_DIR "$URL" && [ -e /proc/$PID1 ]&& kill -15 $PID1
+[ -e $SRC_DIR/Sources.gz ]&& gunzip $SRC_DIR/Sources.gz
+fi
+
