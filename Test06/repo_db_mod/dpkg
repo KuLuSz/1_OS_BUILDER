@@ -1,0 +1,3 @@
+remove:apt
+remove:libdigest
+remove:perl

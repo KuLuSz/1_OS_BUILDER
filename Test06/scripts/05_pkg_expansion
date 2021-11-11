@@ -1,0 +1,74 @@
+#!/bin/sh
+
+[ -e $STOP ]&& exit
+
+echo -e "\n Package list expansion - Check/add dependencies...\n" | tee -a /dev/console $LOG
+
+F="$PFL"
+F2="${F}_2"
+
+GREPV=''
+[ "$ARCH" == "i386" ]&& GREPV="amd64"
+
+rm -f ${F}*
+touch $F $F2
+
+echo -e "\n Add user selected packages:" | tee -a /dev/console $LOG
+cat $PL | tee $F $F2 | sed 's/^/ > add /' | tee -a /dev/console $LOG
+echo | tee -a /dev/console $LOG
+
+ACNT=0 # add count
+FCNT=0 # failed count
+
+echo -e "\n  Add system base packages:" | tee -a /dev/console $LOG
+for i in "`grep "^add:" $RDBM/default_system | cut -f2- -d: | tr ' ' '\n' | sed '/^$/d'`";do
+[ ! "$(cat $F2 | grep "^${i}$")" ]&&\
+echo "$i" | tee -a "$F" "$F2" | sed 's/^/ > add /' | tee -a /dev/console $LOG
+done
+
+while [ "$(cat $F)" != '' ];do
+ SP="$(cat $F | head -n1 | cut -f1 -d:)"
+ [ -z "$(cat $RF | grep "^${SP}")" ]&&\
+ echo " ! Failed: not found $SP package in the repository" | tee -a /dev/console $LOG &&\
+ SP='' && ((FCNT++))
+ 
+ if [ "$SP" ];then
+ echo " # Check dependencies for $SP" | tee -a /dev/console $LOG
+ ((ACNT++))
+ #add depending pkgs
+ NPKGS="$(grep "^${SP}:" $RF | cut -f2- -d':' | sed -e 's/,/\n/g')"
+ if [ "`ls -1 $RDBM | grep "$SP$"`" ];then
+   if [ "`grep "^add:" $RDBM/$SP`" ];then
+   grep "^add:" $RDBM/$SP | cut -f2- -d: | tr ' ' '\n' | sed '/^$/d' |\
+   tee -a "$F" "$F2" | sed 's/^/ > add / ; s/$/    \[builder modification\]/' | tee -a /dev/console $LOG
+   fi
+   if [ "`grep "^remove:" $RDBM/$SP`" ];then
+   remove="$(grep "^remove:" $RDBM/$SP | cut -f2 -d: | tr ' ' '\n' | sed '/^$/d')"
+   echo "$remove" | sed 's/^/ < remove / ; s/$/    \[builder modification\]/' | tee -a /dev/console $LOG
+   REMOVE="$(sed 's/$/\\|/' <<< "$remove" | tr -d '\n' | sed 's/\\|$//')"
+   NPKGS="$(sed "/$REMOVE/d" <<< "$NPKGS")"
+   fi
+ fi
+
+  if [ "$NPKGS" ];then
+
+   for i in $NPKGS;do
+   if [ ! "$(grep "^${i}$" $F2)" ];then
+    tee -a "$F" "$F2" <<< "$i" | sed 's/^/ > add /' | tee -a /dev/console $LOG
+   fi
+   done
+  fi
+ 
+ fi
+ [ "$(cat $F)" != '' ]&& sed -i '/^$/d' "$F" && sed -i '1 d' "$F"
+done
+
+cat $F2 | sort | uniq > $F && rm $F2
+
+echo -e "\n $ACNT package will be download...
+ $FCNT package not found in database...\n" | tee -a /dev/console $LOG
+
+if [ $FCNT -gt $((ACNT/2)) ];then
+ echo " ERROR: You are missing more packages than you should.
+ Choose other repository for build." > $STOP
+fi

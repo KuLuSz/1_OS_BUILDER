@@ -1,0 +1,44 @@
+#!/bin/sh
+
+[ -e $STOP ]&& exit
+
+echo
+
+ARCH="$(cat $LOG | grep "Arch:" | awk '{print $2}')"
+DIST="$(cat $LOG | grep "Repo:" | awk '{print $2}')"
+REPO="$(cat $LOG | grep "Repo:" | awk '{print $3}')"
+LINK="$(grep "^$DIST:" <<< "$REPOS" | cut -f2- -d:)"
+
+[ ! -d $RD ]&& mkdir -p $RD
+
+LINK3="$(wget -q -O- "$LINK/dists/$REPO/" | grep "main\|verse")"
+[ "$(grep main <<< "$LINK3")" ]&& MAIN="main"
+[ "$(grep universe <<< "$LINK3")" ]&& UNI="universe"
+[ "$(grep multiverse <<< "$LINK3")" ]&& MULT="multiverse"
+
+for i in $MAIN $UNI $MULT;do
+LINK2=$LINK/dists/$REPO/$i/binary-$ARCH/Packages.gz
+FILE_NAME="$(sed 's%http://%% ; s:/:_:g ' <<< "$LINK2")"
+echo >> $LOG
+echo -n "  Download $DIST $REPO $i package database..." | tee -a /dev/console $LOG
+wget --spider -q "$LINK2"
+if [ -n $? ];then
+ wget -q --no-check-certificate -O "$RD/$FILE_NAME" "$LINK2"
+ echo -e "\\033[68G[DONE]"
+else
+ echo -e "\\033[66G[FAILED]"
+ wget --spider "$LINK2"| tee -a /dev/console $LOG
+fi
+done
+
+gunzip -rf $RD/*
+
+echo | tee -a /dev/console $LOG
+echo -n "  Convert repository for fast working..." | tee -a /dev/console $LOG
+echo -e "\n" >> $LOG
+
+cat $RD/* | grep "^Pac\|^Dep" |
+sed -e 's/Package/:/ ; s/Depends// ; s/([^)]*)\| //g ; s/,/\n,/g' |
+cut -f1 -d'|' | tr -d '\n' | sed -e 's/::/\n/g ; s/$/:/g' > $RF
+
+echo -e "\\033[68G[DONE]"

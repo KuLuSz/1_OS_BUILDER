@@ -1,0 +1,14 @@
+add:xorg
+add:mesa-utils
+add:mesa-vdpau-drivers
+add:llvm
+add:desktop-file-utils
+add:libegl1-mesa
+add:libegl-mesa0
+add:libgl1-mesa-dri
+add:libgl1-mesa-glx
+add:libglapi-mesa
+add:libglx-mesa0
+add:xinit
+add:xdg-utils
+add:xserver-xorg-input-all

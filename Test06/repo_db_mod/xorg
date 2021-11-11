@@ -1,0 +1,4 @@
+add:lxterminal
+remove:gnome-terminal
+remove:x11-session-utils
+remove:xorg-docs-core

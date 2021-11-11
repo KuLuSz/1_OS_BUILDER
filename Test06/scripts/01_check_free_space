@@ -1,0 +1,31 @@
+#!/bin/sh
+
+[ -e $STOP ]&& exit
+
+echo -ne " Checking: free space"
+
+cd "$BD"
+F_SPACE="$(df . --output=avail | sed '1d')"
+F_SPACE2="$(df -h . --output=avail | sed '1d')"
+
+if [ "$F_SPACE" -lt 2097152 ];then # 2Gb
+echo -e "\\033[64G[CAUTION!]"
+MESS="- (may not be enough)"
+else
+echo -e "\\033[70G[OK]"
+fi
+echo -e "\n  Free space have on the current device:${F_SPACE2}b $MESS
+  It take 2-8 Gb to build the system.\n"
+
+echo -n " You continue this in mind? yes=enter quit=q   "
+read i
+if [ "$i" == "q" ];then
+ echo -e "\n Suggestion:\n
+   Copy the $BD folder\n   to another device, where you have 2Gb free space,
+   then run the stuff again from there...
+
+ Quiting"
+touch $STOP
+sleep 15
+fi
+
