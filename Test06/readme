@@ -49,15 +49,15 @@
 		04_pkg_chooser
 			package chooser, add at least one package to the build
 			usage:	1.  you get Search filed. conditions of keywords:
-						lower case letters, more than 2 char, hyphen or numbers
-					2.  when you get package names with numbers,
-						just type the number for add to package list
-						add multiple packages: 1 4 15
-						or use the "all" keyword to add all package
-						if you not want add package, just hit enter
-					   
-						if you finish the 2. step, you get already the Search field.
-						if you want leave the package chooser type q and hit enter
+				lower case letters, more than 2 char, hyphen or numbers
+				2.  when you get package names with numbers,
+				just type the number for add to package list
+				add multiple packages: 1 4 15
+				or use the "all" keyword to add all package
+				if you not want add package, just hit enter
+				
+				if you finish the 2. step, you get already the Search field.
+				if you want leave the package chooser type q and hit enter
 					   
 		05_pkg_expansion
 			package list expansion, this script read the converted database files,
@@ -71,4 +71,7 @@
 			-remove dependency from the package, type remove:dependencyfullname to the file
 			-add dependency for the package, type add:dependencyfullname to the file
 								  
-			 default_system file: contains the basic CLI system additions
+			repo_db_mod/puppy-kit folder:
+			contains specified puppy package kits
+			package name = filename
+			"add:" lines like dependencies of package
