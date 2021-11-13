@@ -24,6 +24,7 @@ BD="${0%/*}" 						# base folder
 TMP="$BD/tmp"						# temp folder
 SCRIPT_DIR="$BD/scripts"			# script folder
 RDBM="$BD/repo_db_mod"				# repo database modifications dir
+PK="$RDBM/puppy-kit"				# meta package definitions dir
 RD="$TMP/repo"						# repo dir
 RF="$TMP/repository"				# converted repository file
 PFL="$TMP/pkg_list"					# package file list

@@ -21,8 +21,9 @@ while : ;do
  [ "$i" == 'q' ]&& break
 
  if [ "$i" == 'h' ];then
-PKGS="bash binutils busybox coreutils disktype findutils fuse gzip kmod mingetty
-ncurses-base readline-common sed udev unzip util-linux zip zlib1g"
+#PKGS="bash binutils busybox coreutils disktype findutils fuse gzip kmod mingetty
+#ncurses-base readline-common sed udev unzip util-linux zip zlib1g"
+PKGS="$(grep "^add:" $RDBM/default_system | cut -f2- -d: | sed 's/$/ /' | tr -d '\n' | sed 's/ $//')"
  echo -e "\nRecommended minimum package list:\n$PKGS\n"
  echo -n "You want add these packages to the selected list ?
    enter = yes , any key = no "

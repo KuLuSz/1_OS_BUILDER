@@ -20,12 +20,6 @@ echo | tee -a /dev/console $LOG
 ACNT=0 # add count
 FCNT=0 # failed count
 
-echo -e "\n  Add system base packages:" | tee -a /dev/console $LOG
-for i in "`grep "^add:" $RDBM/default_system | cut -f2- -d: | tr ' ' '\n' | sed '/^$/d'`";do
-[ ! "$(cat $F2 | grep "^${i}$")" ]&&\
-echo "$i" | tee -a "$F" "$F2" | sed 's/^/ > add /' | tee -a /dev/console $LOG
-done
-
 while [ "$(cat $F)" != '' ];do
  SP="$(cat $F | head -n1 | cut -f1 -d:)"
  [ -z "$(cat $RF | grep "^${SP}")" ]&&\
