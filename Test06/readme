@@ -42,7 +42,9 @@
 			configure architecture, distro, repository, kernel
 
 		03_download_database
-			download repositories, then convert to the following scripts 
+			download repositories,
+			read repo_db_mod/puppy-kit folder, for specified puppy package kits
+			then convert to the following scripts 
 
 		04_pkg_chooser
 			package chooser, add at least one package to the build
